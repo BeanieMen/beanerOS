@@ -1,0 +1,7 @@
+# Build artifacts
+*.o
+kernel.elf
+os.iso
+qemulog.txt
+src/objects/
+iso/boot/kernel.elf
