@@ -10,21 +10,31 @@ SRC_DIR = src
 INCLUDE_DIR = $(SRC_DIR)/include
 DRIVER_DIR = $(SRC_DIR)/driver
 KERNEL_DIR = $(SRC_DIR)/kernel
+MM_DIR = $(SRC_DIR)/mm
+FS_DIR = $(SRC_DIR)/fs
+LIBC_DIR = $(SRC_DIR)/libc
 OBJ_DIR = $(SRC_DIR)/objects
+TOOLS_DIR = tools
+INITRD_DIR = initrd_files
 
 # Flags
 ASFLAGS = -f elf32
 LDFLAGS = -T link.ld -melf_i386
 CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
-         -nostartfiles -nodefaultlibs -Wall -Wextra -Werror -c -I$(INCLUDE_DIR)
+         -nostartfiles -nodefaultlibs -Wall -Wextra -Werror -c \
+         -I$(INCLUDE_DIR) -I$(LIBC_DIR)/include -D__is_libk
 
 # Output files
 KERNEL = kernel.elf
 ISO = os.iso
+INITRD = initrd.img
 
 # Source files
-ASM_SOURCES = loader.s
-C_SOURCES = $(wildcard $(KERNEL_DIR)/*.c) $(wildcard $(DRIVER_DIR)/*.c)
+ASM_SOURCES = loader.s $(wildcard $(SRC_DIR)/kernel/*.s) $(wildcard $(SRC_DIR)/mm/*.s)
+C_SOURCES = $(wildcard $(KERNEL_DIR)/*.c) $(wildcard $(DRIVER_DIR)/*.c) \
+            $(wildcard $(MM_DIR)/*.c) $(wildcard $(FS_DIR)/*.c) \
+            $(wildcard $(LIBC_DIR)/stdio/*.c) $(wildcard $(LIBC_DIR)/stdlib/*.c) \
+            $(wildcard $(LIBC_DIR)/string/*.c)
 ASM_OBJECTS = $(ASM_SOURCES:.s=.o)
 C_OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(C_SOURCES))
 OBJECTS = $(ASM_OBJECTS) $(C_OBJECTS)
@@ -36,7 +46,7 @@ GRUB_DIR = $(BOOT_DIR)/grub
 
 # QEMU settings
 QEMU = qemu-system-i386
-QEMU_FLAGS = -m 32 -cdrom $(ISO) -boot d -d cpu_reset,int,exec,cpu -D qemulog.txt
+QEMU_FLAGS = -m 32 -cdrom $(ISO) -boot d
 
 # Default target
 .PHONY: all
@@ -55,10 +65,15 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 $(KERNEL): $(OBJECTS)
 	$(LD) $(LDFLAGS) $(OBJECTS) -o $@
 
+# Create initrd
+$(INITRD): $(wildcard $(INITRD_DIR)/*)
+	@python3 $(TOOLS_DIR)/mk_initrd.py $@ $(INITRD_DIR)/*
+
 # Create ISO image
-$(ISO): $(KERNEL)
+$(ISO): $(KERNEL) $(INITRD)
 	@mkdir -p $(BOOT_DIR)
 	@cp $(KERNEL) $(BOOT_DIR)/
+	@cp $(INITRD) $(BOOT_DIR)/
 	@cp stage2_eltorito $(GRUB_DIR)/stage2_eltorito 2>/dev/null || true
 	genisoimage -R \
 		-b boot/grub/stage2_eltorito \
@@ -80,7 +95,7 @@ run: $(ISO)
 # Clean build artifacts
 .PHONY: clean
 clean:
-	rm -f $(ASM_OBJECTS) $(KERNEL) $(ISO)
+	rm -f $(ASM_OBJECTS) $(KERNEL) $(ISO) $(INITRD)
 	rm -f qemulog.txt
 	rm -rf $(OBJ_DIR)
 

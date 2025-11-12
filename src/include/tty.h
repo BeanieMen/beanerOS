@@ -1,5 +1,5 @@
-#ifndef VGA_H
-#define VGA_H
+#ifndef TTY_H
+#define TTY_H
 enum vga_color {
     VGA_COLOR_BLACK = 0,
     VGA_COLOR_BLUE = 1,
@@ -31,5 +31,6 @@ void terminal_write(const char* data, unsigned int size);
 void terminal_writestring(const char* data);
 void terminal_writestring_color(const char* data, enum vga_color fg, enum vga_color bg);
 void terminal_backspace(void);
+void terminal_clear(void);
 
-#endif /* VGA_H */
+#endif /* TTY_H */

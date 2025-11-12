@@ -1,5 +1,7 @@
-default=0
-timeout=0
+default 0
+timeout 0
 
-title os
+title Beaner
 kernel /boot/kernel.elf
+module /boot/initrd.img
+boot

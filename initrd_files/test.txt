@@ -1,0 +1,2 @@
+Hello from Beaner OS!
+This is a test file loaded from the initial ramdisk.
