@@ -3,5 +3,4 @@ timeout 0
 
 title Beaner
 kernel /boot/kernel.elf
-module /boot/initrd.img
 boot

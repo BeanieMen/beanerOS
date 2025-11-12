@@ -112,7 +112,6 @@ void terminal_putchar(char c) {
             terminal_scroll();
         }
         update_cursor(terminal_column, terminal_row);
-        //  mirror newline to serial (debugging heaven achieved)
         serial_putchar('\n');
         return;
     }

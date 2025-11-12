@@ -27,7 +27,7 @@ CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fstack-protector-strong \
 # Output files
 KERNEL = kernel.elf
 ISO = os.iso
-INITRD = initrd.img
+DISK = disk.img
 
 # Source files
 ASM_SOURCES = loader.s $(wildcard $(SRC_DIR)/kernel/*.s) $(wildcard $(SRC_DIR)/mm/*.s)
@@ -46,7 +46,8 @@ GRUB_DIR = $(BOOT_DIR)/grub
 
 # QEMU settings
 QEMU = qemu-system-i386
-QEMU_FLAGS = -m 32 -cdrom $(ISO) -boot d -serial file:serial.log
+QEMU_FLAGS = -m 32 -cdrom $(ISO) -boot d -serial file:serial.log \
+             -drive file=disk.img,format=raw,if=ide
 
 # Default target
 .PHONY: all
@@ -65,15 +66,14 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
 $(KERNEL): $(OBJECTS)
 	$(LD) $(LDFLAGS) $(OBJECTS) -o $@
 
-# Create initrd
-$(INITRD): $(wildcard $(INITRD_DIR)/*)
-	@python3 $(TOOLS_DIR)/mk_initrd.py $@ $(INITRD_DIR)/*
+# Create disk image
+$(DISK):
+	@$(TOOLS_DIR)/make_disk.sh
 
 # Create ISO image
-$(ISO): $(KERNEL) $(INITRD)
+$(ISO): $(KERNEL)
 	@mkdir -p $(BOOT_DIR)
 	@cp $(KERNEL) $(BOOT_DIR)/
-	@cp $(INITRD) $(BOOT_DIR)/
 	@cp stage2_eltorito $(GRUB_DIR)/stage2_eltorito 2>/dev/null || true
 	genisoimage -R \
 		-b boot/grub/stage2_eltorito \
@@ -87,15 +87,15 @@ $(ISO): $(KERNEL) $(INITRD)
 		$(ISO_DIR)
 	@echo "ISO image created: $(ISO)"
 
-# Run with QEMU
+# Run in QEMU
 .PHONY: run
-run: $(ISO)
+run: $(ISO) $(DISK)
 	$(QEMU) $(QEMU_FLAGS)
 
 # Clean build artifacts
 .PHONY: clean
 clean:
-	rm -f $(ASM_OBJECTS) $(KERNEL) $(ISO) $(INITRD)
+	rm -f $(ASM_OBJECTS) $(KERNEL) $(ISO)
 	rm -f qemulog.txt
 	rm -rf $(OBJ_DIR)
 
