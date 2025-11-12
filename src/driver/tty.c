@@ -1,5 +1,6 @@
 #include "tty.h"
 #include "io.h"
+#include "serial.h"
 #include <string.h>
 
 #define VGA_ADDRESS 0xB8000
@@ -48,6 +49,7 @@ static void terminal_scroll(void) {
 static void terminal_putentryat(char c, unsigned char color, unsigned int x, unsigned int y) {
     const unsigned int index = y * VGA_WIDTH + x;
     terminal_buffer[index] = vga_entry(c, color);
+    serial_putchar(c);
 }
 
 void terminal_initialize(void) {
@@ -110,6 +112,8 @@ void terminal_putchar(char c) {
             terminal_scroll();
         }
         update_cursor(terminal_column, terminal_row);
+        //  mirror newline to serial (debugging heaven achieved)
+        serial_putchar('\n');
         return;
     }
     

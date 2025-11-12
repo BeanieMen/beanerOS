@@ -27,3 +27,9 @@ void serial_write(const char* data) {
         serial_putchar(*data++);
     }
 }
+
+void serial_write_buf(const char* data, unsigned int size) {
+    for (unsigned int i = 0; i < size; i++) {
+        serial_putchar(data[i]);
+    }
+}

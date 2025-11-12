@@ -46,7 +46,7 @@ GRUB_DIR = $(BOOT_DIR)/grub
 
 # QEMU settings
 QEMU = qemu-system-i386
-QEMU_FLAGS = -m 32 -cdrom $(ISO) -boot d
+QEMU_FLAGS = -m 32 -cdrom $(ISO) -boot d -serial file:serial.log
 
 # Default target
 .PHONY: all
