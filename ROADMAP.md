@@ -5,36 +5,33 @@
 
 ## 🧱 Phase 0 — Current foundation
 ✅ Bootloader (`loader.s`, `link.ld`)  
-✅ TTY text output (`src/driver/tty.c`)  
-✅ Basic kernel main and Makefile  
-✅ libc integration (stdio, stdlib, string)
+✅ VGA text output (`src/driver/vga.c`)  
+🟡 Basic kernel main and Makefile  
 
-**Status: Complete**
+Next: memory management, interrupts, user mode.
 
 ---
 
 ## ⚙️ Phase 1 — Core kernel systems
 > Goal: Run user-mode programs safely and allocate memory dynamically.
 
-✅ **Physical Memory Manager (PMM)**
+- [ ] **Physical Memory Manager (PMM)**
   - Bitmap allocator for physical frames (`pmm_alloc_frame`, `pmm_free_frame`).
-✅ **Paging / Virtual Memory Manager (VMM)**
+- [ ] **Paging / Virtual Memory Manager (VMM)**
   - Enable paging, identity-map kernel, separate user/kernel space.
   - Implement `vmm_map`, `vmm_unmap`, and page fault handler.
-✅ **Kernel heap**
+- [ ] **Kernel heap**
   - Implement `kmalloc` / `kfree` for dynamic allocation.
-✅ **Interrupts & exceptions**
+- [ ] **Interrupts & exceptions**
   - Remap PIC, handle IRQs, and basic ISR registration.
-✅ **Timer (PIT or APIC)**
+- [ ] **Timer (PIT or APIC)**
   - Periodic tick for scheduling and sleeping.
-✅ **Keyboard driver**
-  - PS/2 polling input (IRQ-based ready, needs integration).
-✅ **Serial driver**
+- [ ] **Keyboard driver**
+  - PS/2 IRQ1 input → basic key events.
+- [ ] **Serial driver**
   - Output debug logs to COM1 (`/dev/ttyS0`).
-✅ **Scheduler**
-  - Task structs, context switching, and round-robin scheduling (framework ready).
-
-**Status: Complete - All core systems implemented**
+- [ ] **Scheduler**
+  - Task structs, context switching, round-robin scheduling.
 
 ---
 
