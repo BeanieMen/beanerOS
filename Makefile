@@ -20,7 +20,7 @@ INITRD_DIR = initrd_files
 # Flags
 ASFLAGS = -f elf32
 LDFLAGS = -T link.ld -melf_i386
-CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
+CFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fstack-protector-strong \
          -nostartfiles -nodefaultlibs -Wall -Wextra -Werror -c \
          -I$(INCLUDE_DIR) -I$(LIBC_DIR)/include -D__is_libk
 

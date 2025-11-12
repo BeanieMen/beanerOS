@@ -7,7 +7,6 @@
 #include "idt.h"
 #include "timer.h"
 #include "serial.h"
-#include "scheduler.h"
 #include "initrd.h"
 #include <stdio.h>
 #include <string.h>
@@ -223,9 +222,6 @@ void kmain(multiboot_info_t *mboot_info) {
     
     kheap_init();
     print_status("Kernel heap initialized");
-    
-    scheduler_init();
-    print_status("Scheduler initialized");
 
     if (mboot_info && (mboot_info->flags & 0x8) && mboot_info->mods_count > 0) {
         multiboot_mod_t *mod = (multiboot_mod_t *)mboot_info->mods_addr;

@@ -6,3 +6,4 @@ qemulog.txt
 src/objects/
 iso/boot/kernel.elf
 serial.log
+*.img
