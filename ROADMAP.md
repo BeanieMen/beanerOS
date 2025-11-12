@@ -5,8 +5,8 @@
 
 ## 🧱 Phase 0 — Current foundation
 ✅ Bootloader (`loader.s`, `link.ld`)  
-✅ VGA text output (`src/driver/vga.c`)  
-🟡 Basic kernel main and Makefile  
+✅ VGA text output (`src/driver/tty.c`)  
+✅ Basic kernel main and Makefile  
 
 Next: memory management, interrupts, user mode.
 
@@ -15,23 +15,21 @@ Next: memory management, interrupts, user mode.
 ## ⚙️ Phase 1 — Core kernel systems
 > Goal: Run user-mode programs safely and allocate memory dynamically.
 
-- [ ] **Physical Memory Manager (PMM)**
+- [x] **Physical Memory Manager (PMM)**
   - Bitmap allocator for physical frames (`pmm_alloc_frame`, `pmm_free_frame`).
-- [ ] **Paging / Virtual Memory Manager (VMM)**
+- [x] **Paging / Virtual Memory Manager (VMM)**
   - Enable paging, identity-map kernel, separate user/kernel space.
   - Implement `vmm_map`, `vmm_unmap`, and page fault handler.
-- [ ] **Kernel heap**
+- [x] **Kernel heap**
   - Implement `kmalloc` / `kfree` for dynamic allocation.
-- [ ] **Interrupts & exceptions**
+- [x] **Interrupts & exceptions**
   - Remap PIC, handle IRQs, and basic ISR registration.
-- [ ] **Timer (PIT or APIC)**
+- [x] **Timer (PIT or APIC)**
   - Periodic tick for scheduling and sleeping.
-- [ ] **Keyboard driver**
+- [x] **Keyboard driver**
   - PS/2 IRQ1 input → basic key events.
-- [ ] **Serial driver**
+- [x] **Serial driver**
   - Output debug logs to COM1 (`/dev/ttyS0`).
-- [ ] **Scheduler**
-  - Task structs, context switching, round-robin scheduling.
 
 ---
 
@@ -49,6 +47,8 @@ Next: memory management, interrupts, user mode.
   - Map sections, stack, and jump to entry point.
 - [ ] **Init process**
   - First userspace process that spawns the shell.
+- [ ] **Scheduler**
+  - Task structs, context switching, round-robin scheduling.
 
 ---
 
@@ -61,8 +61,10 @@ Next: memory management, interrupts, user mode.
   - Temporary in-memory FS for user binaries and test data.
 - [ ] **File API**
   - `open`, `read`, `write`, `close`, `stat`.
-- [ ] **Disk driver (optional)**
-  - Start with ATA/IDE PIO.
+- [x] **Disk driver (ATA/IDE PIO)**
+  - ATA driver with sector-level I/O operations.
+- [x] **FAT32 filesystem**
+  - Complete FAT32 implementation with cluster allocation, directory operations, and file I/O.
 
 ---
 
@@ -71,10 +73,10 @@ Next: memory management, interrupts, user mode.
 
 - [ ] **libc port (Newlib or musl)**
   - Implement low-level syscall bindings.
-- [ ] **Shell**
-  - Interactive shell running via syscalls.
-- [ ] **Basic utilities**
-  - `cat`, `ls`, `echo`, `cp`, `sleep`, etc.
+- [x] **Shell**
+  - Interactive shell with command parsing and execution.
+- [x] **Basic utilities**
+  - `ls`, `cat`, `echo`, `touch`, `mkdir`, `cd`, `pwd`, `help` commands.
 - [ ] **Cross-compiler toolchain**
   - Build `binutils` + `gcc` targeting `beaneros` (`x86_64-beaner-elf`).
   - Build kernel and user programs with it.
@@ -131,8 +133,7 @@ Next: memory management, interrupts, user mode.
 - [xv6 source (MIT)](https://github.com/mit-pdos/xv6-public)
 - [Little OS Book](https://littleosbook.github.io/)
 - [SerenityOS](https://github.com/SerenityOS/serenity)
-- [Blargg’s test ROMs](https://github.com/retrio/gb-test-roms)
-
+- [Wiki OsDev](https://wiki.osdev.org)
 ---
 
 *Author: [@BeanieMen](https://github.com/BeanieMen)*  
