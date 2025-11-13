@@ -186,8 +186,72 @@ void cmd_mkdir(Fat *fs, const char *dirname) {
 
 void cmd_cd(Fat *fs, const char *dirname) {
     (void)fs;
-    (void)dirname;
-    printf("cd not yet implemented\n");
+    
+    if (!dirname || dirname[0] == '\0') {
+        dirname = "/";
+    }
+    
+    while (*dirname == ' ' || *dirname == '\t') {
+        dirname++;
+    }
+    
+    size_t name_len = 0;
+    while (name_len < 249 && dirname[name_len] && dirname[name_len] != '\n') {
+        name_len++;
+    }
+    while (name_len > 0 && (dirname[name_len - 1] == ' ' || dirname[name_len - 1] == '\t')) {
+        name_len--;
+    }
+    
+    if (name_len == 0) {
+        dirname = "/";
+        name_len = 1;
+    }
+    
+    static char new_path[256];
+    
+    if (name_len == 1 && dirname[0] == '.') {
+        return;
+    }
+    
+    if (name_len == 2 && dirname[0] == '.' && dirname[1] == '.') {
+        size_t cwd_len = strlen(g_cwd);
+        if (cwd_len <= VOLUME_PREFIX_LEN) {
+            return;
+        }
+        
+        size_t i = cwd_len - 1;
+        if (g_cwd[i] == '/') i--;
+        
+        while (i > VOLUME_PREFIX_LEN && g_cwd[i] != '/') {
+            i--;
+        }
+        
+        if (i <= VOLUME_PREFIX_LEN) {
+            strncpy(g_cwd, "/root", sizeof(g_cwd) - 1);
+        } else {
+            g_cwd[i] = '\0';
+        }
+        return;
+    }
+    
+    if (dirname[0] == '/') {
+        memcpy(new_path, "/root", 5);
+        memcpy(new_path + 5, dirname, name_len);
+        new_path[5 + name_len] = '\0';
+    } else {
+        build_path(new_path, dirname, name_len);
+    }
+    
+    Dir dir;
+    int err = fat_dir_open(&dir, new_path);
+    if (err != FAT_ERR_NONE) {
+        printf("cd: cannot access '%.*s': %s\n", (int)name_len, dirname, fat_get_error(err));
+        return;
+    }
+    
+    strncpy(g_cwd, new_path, sizeof(g_cwd) - 1);
+    g_cwd[sizeof(g_cwd) - 1] = '\0';
 }
 
 void cmd_pwd(Fat *fs) {
