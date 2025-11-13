@@ -2,11 +2,11 @@
 #include "commands.h"
 #include "keyboard.h"
 #include "tty.h"
-#include "fat32.h"
+#include "fat.h"
 #include <stdio.h>
 #include <string.h>
 
-extern fat32_fs_t g_fs;
+extern Fat g_fs;
 
 static char* trim_whitespace(char *str) {
     while (*str == ' ' || *str == '\t') str++;

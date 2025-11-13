@@ -39,6 +39,25 @@ int printf(const char* restrict format, ...) {
 
 		const char* format_begun_at = format++;
 
+		int precision = -1;
+		if (*format == '.') {
+			format++;
+			if (*format == '*') {
+				format++;
+				int requested_precision = va_arg(parameters, int);
+				if (requested_precision >= 0) {
+					precision = requested_precision;
+				}
+			} else {
+				int requested_precision = 0;
+				while (*format >= '0' && *format <= '9') {
+					requested_precision = requested_precision * 10 + (*format - '0');
+					format++;
+				}
+				precision = requested_precision;
+			}
+		}
+
 		if (*format == 'c') {
 			format++;
 			char c = (char) va_arg(parameters, int);
@@ -51,7 +70,17 @@ int printf(const char* restrict format, ...) {
 		} else if (*format == 's') {
 			format++;
 			const char* str = va_arg(parameters, const char*);
-			size_t len = strlen(str);
+			if (!str) {
+				str = "(null)";
+			}
+			size_t len = 0;
+			if (precision >= 0) {
+				while (str[len] && len < (size_t)precision) {
+					len++;
+				}
+			} else {
+				len = strlen(str);
+			}
 			if (maxrem < len) {
 				return -1;
 			}
@@ -83,6 +112,34 @@ int printf(const char* restrict format, ...) {
 				buf[i++] = '-';
 			}
 			
+			if (maxrem < (size_t)i) {
+				return -1;
+			}
+		
+			for (int j = i - 1; j >= 0; j--) {
+				if (!print(&buf[j], 1))
+					return -1;
+				written++;
+			}
+		} else if (*format == 'u') {
+			format++;
+			unsigned int num = va_arg(parameters, unsigned int);
+			char buf[11];
+			int i = 0;
+
+			if (num == 0) {
+				buf[i++] = '0';
+			} else {
+				while (num > 0) {
+					buf[i++] = '0' + (num % 10);
+					num /= 10;
+				}
+			}
+
+			if (maxrem < (size_t)i) {
+				return -1;
+			}
+
 			for (int j = i - 1; j >= 0; j--) {
 				if (!print(&buf[j], 1))
 					return -1;

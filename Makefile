@@ -15,7 +15,7 @@ FS_DIR = $(SRC_DIR)/fs
 LIBC_DIR = $(SRC_DIR)/libc
 OBJ_DIR = $(SRC_DIR)/objects
 TOOLS_DIR = tools
-INITRD_DIR = initrd_files
+# INITRD_DIR = initrd_files
 
 # Flags
 ASFLAGS = -f elf32

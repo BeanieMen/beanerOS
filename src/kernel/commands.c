@@ -1,99 +1,202 @@
 #include "commands.h"
-#include "fat32.h"
+#include "fat.h"
 #include "kheap.h"
 #include "tty.h"
 #include <stdio.h>
 #include <string.h>
 
-void cmd_ls(fat32_fs_t *fs) {
-    fat32_list_root(fs);
-}
+static char g_cwd[256] = "/root";
+static const size_t VOLUME_PREFIX_LEN = 5;
 
-void cmd_cat(fat32_fs_t *fs, const char *filename) {
-    uint8_t *data;
-    uint32_t size;
-    
-    if (fat32_read_file(fs, filename, &data, &size) != 0) {
-        printf("File not found: %s\n", filename);
-        return;
-    }
-    
-    if (data == NULL || size == 0) {
-        printf("(empty file)\n");
-        return;
-    }
-    
-    for (uint32_t i = 0; i < size; i++) {
-        char c = (char)data[i];
-        if (c >= 32 && c <= 126) {
-            terminal_putchar(c);
-        } else if (c == '\n' || c == '\t') {
-            terminal_putchar(c);
+static void build_path(char *dest, const char *filename, size_t filename_len) {
+
+        size_t cwd_len = strlen(g_cwd);
+        memcpy(dest, g_cwd, cwd_len);
+        
+        if (cwd_len > 0 && g_cwd[cwd_len - 1] != '/') {
+            dest[cwd_len++] = '/';
         }
-    }
-    terminal_putchar('\n');
-    
-    kfree(data);
+        
+        memcpy(dest + cwd_len, filename, filename_len);
+        dest[cwd_len + filename_len] = '\0';
 }
 
-void cmd_echo(fat32_fs_t *fs, const char *text, const char *output_file, int is_append) {
+void cmd_ls(Fat *fs) {
+    (void)fs;
+    Dir dir;
+    DirInfo info;
+    
+    if (fat_dir_open(&dir, g_cwd) != FAT_ERR_NONE) {
+        printf("Failed to open directory\n");
+        return;
+    }
+    
+    printf("Directory contents:\n");
+    while (fat_dir_read(&dir, &info) == FAT_ERR_NONE) {
+        if (info.attr & FAT_ATTR_DIR) {
+            printf("  [DIR]  %.*s\n", (int)info.name_len, info.name);
+        } else {
+            printf("  [FILE] %.*s (%u bytes)\n", (int)info.name_len, info.name, info.size);
+        }
+        fat_dir_next(&dir);
+    }
+}
+
+void cmd_cat(Fat *fs, const char *filename) {
+    (void)fs;
+    if (!filename) {
+        printf("Usage: cat <file>\n");
+        return;
+    }
+
+    while (*filename == ' ' || *filename == '\t') {
+        filename++;
+    }
+
+    size_t name_len = 0;
+    while (name_len < 249 && filename[name_len] && filename[name_len] != '\n') {
+        name_len++;
+    }
+    while (name_len > 0 && (filename[name_len - 1] == ' ' || filename[name_len - 1] == '\t')) {
+        name_len--;
+    }
+
+    if (name_len == 0) {
+        printf("Usage: cat <file>\n");
+        return;
+    }
+
+    // Build path using static buffer to avoid stack issues
+    static char path[256];
+    build_path(path, filename, name_len);
+
+    File file;
+    int err = fat_file_open(&file, path, FAT_READ);
+    if (err != FAT_ERR_NONE) {
+        printf("cat: cannot open '%.*s': %s\n", (int)name_len, filename, fat_get_error(err));
+        return;
+    }
+
+    // Check for empty files
+    if (file.size == 0) {
+        fat_file_close(&file);
+        return;
+    }
+
+    // Check for invalid cluster (shouldn't happen with non-empty files)
+    if (file.sclust == 0) {
+        printf("cat: '%.*s': invalid file cluster\n", (int)name_len, filename);
+        fat_file_close(&file);
+        return;
+    }
+
+    uint8_t buffer[512];
+
+    for (;;) {
+        int bytes_read = 0;
+        err = fat_file_read(&file, buffer, sizeof(buffer), &bytes_read);
+
+        if (err != FAT_ERR_NONE) {
+            printf("cat: read error: %s\n", fat_get_error(err));
+            break;
+        }
+
+        if (bytes_read == 0) {
+            break;
+        }
+
+        terminal_write((const char*)buffer, (unsigned int)bytes_read);
+    }
+
+    fat_file_close(&file);
+}
+
+void cmd_echo(Fat *fs, const char *text, const char *output_file, int is_append) {
+    (void)fs;
     if (output_file) {
         if (output_file[0] == '\0') {
             printf("Error: No output file specified\n");
             return;
         }
         
-        uint32_t len = strlen(text);
-        uint8_t *data = (uint8_t*)kmalloc(len + 2);
-        if (!data) {
-            printf("Failed to allocate memory\n");
+        static char path[256];
+        size_t name_len = 0;
+        while (name_len < 249 && output_file[name_len]) {
+            name_len++;
+        }
+        build_path(path, output_file, name_len);
+        
+        File file;
+        uint8_t flags = FAT_WRITE | FAT_CREATE;
+        if (is_append) {
+            flags |= FAT_APPEND;
+        } else {
+            flags |= FAT_TRUNC;
+        }
+        
+        if (fat_file_open(&file, path, flags) != FAT_ERR_NONE) {
+            printf("Failed to open file: %s\n", output_file);
             return;
         }
         
-        memcpy(data, text, len);
-        data[len] = '\n';
-        data[len + 1] = '\0';
-        
-        if (is_append) {
-            if (fat32_append_file(fs, output_file, data, len + 1) != 0) {
-                printf("Failed to append to: %s\n", output_file);
-            }
-        } else {
-            if (fat32_write_file(fs, output_file, data, len + 1) != 0) {
-                printf("Failed to write to: %s\n", output_file);
-            }
-        }
-        kfree(data);
+        int bytes_written;
+        int len = strlen(text);
+        fat_file_write(&file, text, len, &bytes_written);
+        fat_file_write(&file, "\n", 1, &bytes_written);
+        fat_file_close(&file);
     } else {
         printf("%s\n", text);
     }
 }
 
-void cmd_touch(fat32_fs_t *fs, const char *filename) {
-    if (fat32_create_file(fs, filename) == 0) {
+void cmd_touch(Fat *fs, const char *filename) {
+    (void)fs;
+    static char path[256];
+    size_t name_len = 0;
+    while (name_len < 249 && filename[name_len]) {
+        name_len++;
+    }
+    build_path(path, filename, name_len);
+    
+    File file;
+    if (fat_file_open(&file, path, FAT_CREATE | FAT_WRITE) == FAT_ERR_NONE) {
+        fat_file_close(&file);
         printf("Created: %s\n", filename);
     } else {
         printf("Failed to create: %s\n", filename);
     }
 }
 
-void cmd_mkdir(fat32_fs_t *fs, const char *dirname) {
-    if (fat32_create_directory(fs, dirname) == 0) {
+void cmd_mkdir(Fat *fs, const char *dirname) {
+    (void)fs;
+    static char path[256];
+    size_t name_len = 0;
+    while (name_len < 249 && dirname[name_len]) {
+        name_len++;
+    }
+    build_path(path, dirname, name_len);
+    
+    Dir dir;
+    if (fat_dir_create(&dir, path) == FAT_ERR_NONE) {
         printf("Created directory: %s\n", dirname);
     } else {
         printf("Failed to create directory: %s\n", dirname);
     }
 }
 
-void cmd_cd(fat32_fs_t *fs, const char *dirname) {
-    if (fat32_change_directory(fs, dirname) == 0) {
-    } else {
-        printf("Failed to change directory: %s\n", dirname);
-    }
+void cmd_cd(Fat *fs, const char *dirname) {
+    (void)fs;
+    (void)dirname;
+    printf("cd not yet implemented\n");
 }
 
-void cmd_pwd(fat32_fs_t *fs) {
-    printf("%s\n", fs->current_dir);
+void cmd_pwd(Fat *fs) {
+    (void)fs;
+    if (strlen(g_cwd) > VOLUME_PREFIX_LEN) {
+        printf("%s\n", g_cwd + VOLUME_PREFIX_LEN);
+    } else {
+        printf("/\n");
+    }
 }
 
 void cmd_help(void) {

@@ -7,7 +7,7 @@
 #include "timer.h"
 #include "serial.h"
 #include "ata.h"
-#include "fat32.h"
+#include "fat.h"
 #include "shell.h"
 #include <stdio.h>
 
@@ -76,7 +76,16 @@ static void boot_animation(void) {
     terminal_writestring("  Done!\n\n");
 }
 
-fat32_fs_t g_fs;
+// FAT32 disk operations callbacks for ATA driver
+static bool fat_read_sector(uint8_t *buf, uint32_t sect) {
+    return ata_read_sectors(sect, 1, buf) == 0;
+}
+
+static bool fat_write_sector(const uint8_t *buf, uint32_t sect) {
+    return ata_write_sectors(sect, 1, (uint8_t*)buf) == 0;
+}
+
+Fat g_fs;
 
 void kmain(multiboot_info_t *mboot_info) {
     (void)mboot_info;
@@ -115,8 +124,13 @@ void kmain(multiboot_info_t *mboot_info) {
     ata_init();
     print_ok("ATA driver initialized");
     
-    if (fat32_init(&g_fs) == 0) {
-        print_ok("FAT32 filesystem mounted");
+    DiskOps ops = {
+        .read = fat_read_sector,
+        .write = fat_write_sector
+    };
+    
+    if (fat_mount(&ops, 0, &g_fs, "root") == FAT_ERR_NONE) {
+        print_ok("FAT32 filesystem mounted at /");
     } else {
         printf("[WARN] Failed to mount FAT32 filesystem\n");
     }
